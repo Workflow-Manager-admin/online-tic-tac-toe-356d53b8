@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
+import AIChat from "./AIChat";
 
 // Color variables for theme
 const COLORS = {
@@ -17,17 +18,14 @@ const COLORS = {
  * Picks center if available, then wins/blocks if possible, otherwise picks random empty.
  */
 function getAIMove(squares, aiMark = 'O', humanMark = 'X') {
-  // Return index for AI's move (0-8)
-  // Helper for win/block
   function findLine(mark) {
     const lines = [
       [0, 1, 2], [3, 4, 5], [6, 7, 8],
       [0, 3, 6], [1, 4, 7], [2, 5, 8],
       [0, 4, 8], [2, 4, 6]
     ];
-    for (const [a,b,c] of lines) {
+    for (const [a, b, c] of lines) {
       const line = [squares[a], squares[b], squares[c]];
-      // Two mark, one empty
       if (
         line.filter(x => x === mark).length === 2 &&
         line.some(x => x === null)
@@ -39,56 +37,87 @@ function getAIMove(squares, aiMark = 'O', humanMark = 'X') {
     }
     return null;
   }
-  // 1. Try to win
   let winMove = findLine(aiMark);
   if (winMove !== null) return winMove;
-  // 2. Block opponent's win
   let blockMove = findLine(humanMark);
   if (blockMove !== null) return blockMove;
-  // 3. Pick center if available
-  if (!squares[4]) return 4;
-  // 4. Pick a random corner if available
-  const corners = [0,2,6,8].filter(i=>!squares[i]);
-  if (corners.length) return corners[Math.floor(Math.random()*corners.length)];
-  // 5. Otherwise pick any empty space
-  const empty = squares.map((v,i)=>v?null:i).filter(i=>i!==null);
-  if (empty.length) return empty[Math.floor(Math.random()*empty.length)];
+  if (!squares[4]) return 4; // center
+  const corners = [0, 2, 6, 8].filter(i => !squares[i]);
+  if (corners.length) return corners[Math.floor(Math.random() * corners.length)];
+  const empty = squares.map((v, i) => v ? null : i).filter(i => i !== null);
+  if (empty.length) return empty[Math.floor(Math.random() * empty.length)];
+  return null;
+}
+
+// Utility to determine winner
+function calculateWinner(sq) {
+  /** Returns 'X', 'O', or null. */
+  const lines = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
+  for (const [a, b, c] of lines) {
+    if (sq[a] && sq[a] === sq[b] && sq[a] === sq[c]) {
+      return sq[a];
+    }
+  }
   return null;
 }
 
 // PUBLIC_INTERFACE
-function TicTacToe() {
+function App() {
   /**
-   * The core Tic Tac Toe hook and game logic.
-   * Supports PvP and PvAI mode selection and integrates AI turn when appropriate.
+   * Main App wrapper for the game and AIChat.
+   * Hoists the game state for passing to the AIChat, and keeps single source of truth for the game & mode management.
    */
+  // Set up CSS theme variables (light mode)
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--ttt-primary', COLORS.primary);
+    root.style.setProperty('--ttt-secondary', COLORS.secondary);
+    root.style.setProperty('--ttt-accent', COLORS.accent);
+    root.style.setProperty('--ttt-board-bg', COLORS.boardBG);
+    root.style.setProperty('--ttt-border', COLORS.border);
+    root.style.setProperty('--ttt-x', COLORS.x);
+    root.style.setProperty('--ttt-o', COLORS.o);
+  }, []);
+
+  // Game state - hoist ALL state needed, including mode
   const emptyBoard = Array(9).fill(null);
   const [squares, setSquares] = useState(emptyBoard);
-  const [xIsNext, setXIsNext] = useState(true); // X starts always
+  const [xIsNext, setXIsNext] = useState(true);
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState(null);
   const [mode, setMode] = useState('pvp'); // "pvp" or "pvai"
   const [aiThinking, setAIThinking] = useState(false);
 
-  // Decide who is AI/human
   const isAI = mode === 'pvai';
   const humanMark = 'X';
   const aiMark = 'O';
 
-  // Evaluate game state for win/draw after every move
-  React.useEffect(() => {
+  // Evaluate for winner/draw after every move
+  useEffect(() => {
     const win = calculateWinner(squares);
     if (win) {
       setWinner(win);
       setGameOver(true);
     } else if (squares.every(square => square)) {
-      setWinner(null); // Draw
+      setWinner(null);
       setGameOver(true);
+    } else {
+      setWinner(null);
+      setGameOver(false);
     }
   }, [squares]);
 
-  // AI move effect: Only in PvAI, only AI's turn, game not over, and not already thinking (prevent infinite loops)
-  React.useEffect(() => {
+  // AI move effect (PvAI, AI turn only, game running, not thinking)
+  useEffect(() => {
     if (isAI && !gameOver && !xIsNext && !aiThinking) {
       setAIThinking(true);
       setTimeout(() => {
@@ -100,7 +129,7 @@ function TicTacToe() {
           setXIsNext(true);
         }
         setAIThinking(false);
-      }, 400); // subtle delay for realistic feel
+      }, 400);
     }
     // eslint-disable-next-line
   }, [xIsNext, isAI, gameOver, aiThinking, squares, aiMark, humanMark]);
@@ -108,7 +137,7 @@ function TicTacToe() {
   // PUBLIC_INTERFACE
   function handleClick(i) {
     if (squares[i] || gameOver) return;
-    // In PvAI, ONLY allow clicks if it's human's turn
+    // PvAI: Only allow click if it's human's turn
     if (isAI && !xIsNext) return;
     const nextSquares = squares.slice();
     nextSquares[i] = xIsNext ? humanMark : aiMark;
@@ -124,6 +153,7 @@ function TicTacToe() {
     setWinner(null);
     setAIThinking(false);
   }
+
   // PUBLIC_INTERFACE
   function handleModeChange(e) {
     const newMode = e.target.value;
@@ -172,96 +202,62 @@ function TicTacToe() {
   }
 
   return (
-    <div className="ttt-container">
-      <h1 className="ttt-title">Tic Tac Toe</h1>
-      <div style={{ marginBottom: 14 }}>
-        <label style={{ marginRight: 12, fontWeight: 500 }}>Mode:</label>
-        <select value={mode} onChange={handleModeChange} style={{ fontSize: '1.08rem', borderRadius: 6, padding: '6px 12px', marginBottom: 4 }}>
-          <option value="pvp">Player vs Player</option>
-          <option value="pvai">Player vs AI</option>
-        </select>
-      </div>
-      <div className="ttt-status" data-testid="ttt-status">
-        {status}
-      </div>
-      <div className="ttt-board" role="grid">
-        {[0, 1, 2].map(row => (
-          <div className="ttt-row" role="row" key={row}>
-            {[0, 1, 2].map(col =>
-              renderSquare(row * 3 + col)
+    <div className="App" style={{ background: COLORS.secondary, minHeight: '100vh' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh' }}>
+        {/* Game board and controls */}
+        <div className="ttt-container">
+          <h1 className="ttt-title">Tic Tac Toe</h1>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ marginRight: 12, fontWeight: 500 }}>Mode:</label>
+            <select value={mode} onChange={handleModeChange} style={{ fontSize: '1.08rem', borderRadius: 6, padding: '6px 12px', marginBottom: 4 }}>
+              <option value="pvp">Player vs Player</option>
+              <option value="pvai">Player vs AI</option>
+            </select>
+          </div>
+          <div className="ttt-status" data-testid="ttt-status">
+            {status}
+          </div>
+          <div className="ttt-board" role="grid">
+            {[0, 1, 2].map(row => (
+              <div className="ttt-row" role="row" key={row}>
+                {[0, 1, 2].map(col =>
+                  renderSquare(row * 3 + col)
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="ttt-controls">
+            <button className="ttt-btn" onClick={handleRestart}>
+              Restart Game
+            </button>
+          </div>
+          <div className="ttt-footer">
+            {mode === 'pvp' ? (
+              <>
+                <span>
+                  <span style={{ color: COLORS.primary, fontWeight: 500 }}>X</span> = Player 1
+                </span>
+                <span style={{ marginLeft: 16 }}>
+                  <span style={{ color: COLORS.accent, fontWeight: 500 }}>O</span> = Player 2
+                </span>
+              </>
+            ) : (
+              <>
+                <span>
+                  <span style={{ color: COLORS.primary, fontWeight: 500 }}>X</span> = <strong>You</strong>
+                </span>
+                <span style={{ marginLeft: 16 }}>
+                  <span style={{ color: COLORS.accent, fontWeight: 500 }}>O</span> = <strong>AI</strong>
+                </span>
+              </>
             )}
           </div>
-        ))}
-      </div>
-      <div className="ttt-controls">
-        <button className="ttt-btn" onClick={handleRestart}>
-          Restart Game
-        </button>
-      </div>
-      <div className="ttt-footer">
-        {mode === 'pvp' ? (
-          <>
-            <span>
-              <span style={{ color: COLORS.primary, fontWeight: 500 }}>X</span> = Player 1
-            </span>
-            <span style={{ marginLeft: 16 }}>
-              <span style={{ color: COLORS.accent, fontWeight: 500 }}>O</span> = Player 2
-            </span>
-          </>
-        ) : (
-          <>
-            <span>
-              <span style={{ color: COLORS.primary, fontWeight: 500 }}>X</span> = <strong>You</strong>
-            </span>
-            <span style={{ marginLeft: 16 }}>
-              <span style={{ color: COLORS.accent, fontWeight: 500 }}>O</span> = <strong>AI</strong>
-            </span>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Utility to determine winner
-function calculateWinner(sq) {
-  /** Returns 'X', 'O', or null. */
-  const lines = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6],
-  ];
-  for (const [a, b, c] of lines) {
-    if (sq[a] && sq[a] === sq[b] && sq[a] === sq[c]) {
-      return sq[a];
-    }
-  }
-  return null;
-}
-
-// PUBLIC_INTERFACE
-function App() {
-  /** Main App wrapper for the game, sets up the page structure and theme. */
-  // Set up CSS theme variables (light mode)
-  React.useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty('--ttt-primary', COLORS.primary);
-    root.style.setProperty('--ttt-secondary', COLORS.secondary);
-    root.style.setProperty('--ttt-accent', COLORS.accent);
-    root.style.setProperty('--ttt-board-bg', COLORS.boardBG);
-    root.style.setProperty('--ttt-border', COLORS.border);
-    root.style.setProperty('--ttt-x', COLORS.x);
-    root.style.setProperty('--ttt-o', COLORS.o);
-  }, []);
-  return (
-    <div className="App" style={{ background: COLORS.secondary, minHeight: '100vh' }}>
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <TicTacToe />
+        </div>
+        {/* AI Chat box */}
+        <AIChat
+          board={squares}
+          status={status}
+        />
       </div>
     </div>
   );
