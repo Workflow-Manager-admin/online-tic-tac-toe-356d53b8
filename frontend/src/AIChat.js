@@ -1,5 +1,33 @@
 import React, { useState } from "react";
 
+/**
+ * Helper to convert the board array to the required '--/X/O, X/O/--, --/--/--' format.
+ * @param {Array} boardArr - Array of 9 elements, 'X', 'O', or null.
+ * @returns {string}
+ */
+function serializeBoard(boardArr) {
+  // For each row: '--' for empty, 'X'/'O' as is. Each row joined with '/'.
+  // Join 3 rows with ', '.
+  function rowToNotation(rowArr) {
+    return rowArr.map(cell => cell ? cell : "--").join("/");
+  }
+  const rows = [
+    rowToNotation(boardArr.slice(0, 3)),
+    rowToNotation(boardArr.slice(3, 6)),
+    rowToNotation(boardArr.slice(6, 9)),
+  ];
+  return rows.join(", ");
+}
+
+// Attempt to infer player assignments: In PvAI, user is X, AI is O. In PvP, just show X=Player 1, etc.
+// We'll default to user=X, AI=O.
+function getPlayerRoles() {
+  return {
+    user: "X",
+    ai: "O",
+  };
+}
+
 // PUBLIC_INTERFACE
 function AIChat({ board, status }) {
   /**
@@ -16,33 +44,26 @@ function AIChat({ board, status }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Helper function to serialize board state
-  function boardToString(boardArr) {
-    // 'X O X\nO X O\n      '
-    let out = "";
-    for (let i = 0; i < 9; i += 3) {
-      out += boardArr.slice(i, i + 3)
-        .map(cell => cell ? cell : " ")
-        .join(" ");
-      out += "\n";
-    }
-    return out.trim();
-  }
-
-  // Generate prompt for OpenAI
+  // Generate OpenAI prompt including board in required notation and explicit roles.
   function makePrompt(userMessage) {
+    const boardString = serializeBoard(board);
+    const { user, ai } = getPlayerRoles();
     return (
 `You are an expert Tic Tac Toe commentator and strategy assistant.
 
-Current board:
-${boardToString(board)}
+Game roles:
+- User is playing as: ${user}
+- AI is playing as: ${ai}
+
+Current board (use '--' for empty, each row as [cell1/cell2/cell3]):
+${boardString}
 
 Current status: ${status}
 
-Respond in a friendly and concise way.
-1. If the user asks for a hint or help, provide one useful move suggestion or brief strategic advice, based on the board. 
-2. If not, provide fun, insightful commentary about the current game, moves, or situation.
-Short responses (max 2 sentences).
+Instructions:
+1. If the user asks for a hint or help, provide one useful move suggestion or brief strategic advice, based on the board and indicating their symbol (${user}).
+2. If not, provide fun or insightful commentary about the current game, moves, or situation.
+Respond in a concise and friendly way. Max 2 sentences.
 
 User: ${userMessage}`
     );
@@ -58,8 +79,11 @@ User: ${userMessage}`
     setLoading(true);
 
     try {
-      // Use OpenAI Chat API via fetch (API key must NOT be checked in; we use env var)
+      // Always retrieve the API key from environment.
+      // In create-react-app it is only available at build time and must be prefixed REACT_APP_
       const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
+      if (!apiKey) throw new Error("Missing OpenAI API key (REACT_APP_OPENAI_API_KEY)");
+
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -69,7 +93,10 @@ User: ${userMessage}`
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
           messages: [
-            { role: "system", content: "You are a Tic Tac Toe AI who adds live commentary and provides helpful hints. Responses: max 2 sentences." },
+            {
+              role: "system",
+              content: "You are a Tic Tac Toe AI who adds live commentary and provides helpful hints. Responses: max 2 sentences."
+            },
             { role: "user", content: makePrompt(userMsg) }
           ],
           max_tokens: 90,
