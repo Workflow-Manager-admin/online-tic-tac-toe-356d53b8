@@ -1,0 +1,166 @@
+/* Theme variables for tic tac toe (light mode only) */
+:root {
+  --ttt-primary: #2196f3;
+  --ttt-secondary: #f5f5f5;
+  --ttt-accent: #ff9800;
+  --ttt-board-bg: #fff;
+  --ttt-border: #e9ecef;
+  --ttt-x: #2196f3;
+  --ttt-o: #ff9800;
+}
+
+.App {
+  text-align: center;
+  background: var(--ttt-secondary);
+  color: #222;
+  min-height: 100vh;
+  font-family: "Inter", "Roboto", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Game container centering */
+.ttt-container {
+  margin: 0 auto;
+  background: var(--ttt-board-bg);
+  border-radius: 22px;
+  box-shadow: 0 4px 24px 0 rgba(33, 150, 243, 0.06),
+    0 1.5px 4px -2px var(--ttt-accent);
+  padding: 40px 36px 24px 36px;
+  min-width: 340px;
+  min-height: 450px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ttt-title {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--ttt-primary);
+  font-family: inherit;
+  letter-spacing: 0.01em;
+}
+
+.ttt-status {
+  font-size: 1.22rem;
+  font-weight: 500;
+  margin-bottom: 14px;
+  color: #222;
+  min-height:32px;
+  letter-spacing: 0.01em;
+}
+
+/* Tic Tac Toe Board */
+.ttt-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--ttt-secondary);
+  border-radius: 12px;
+  border: 1.5px solid var(--ttt-border);
+  margin-bottom: 26px;
+  box-shadow: 0 1px 3px 0 rgba(33, 150, 243, 0.04);
+  padding: 10px 8px;
+  min-width: 225px;
+}
+
+.ttt-row {
+  display: flex;
+}
+
+.square {
+  width: 68px;
+  height: 68px;
+  margin: 4px;
+  color: var(--ttt-primary);
+  font-size: 2.4rem;
+  font-weight: 700;
+  background: #fff;
+  border: 1.5px solid var(--ttt-border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.14s, border 0.18s, color 0.14s;
+  outline: none;
+}
+.square:disabled {
+  background: var(--ttt-secondary);
+  color: #bdbdbd;
+  cursor: not-allowed;
+}
+
+/* Mark X/O colors */
+.square {
+  transition: color 0.17s;
+}
+.square[aria-label*="X"] {
+  color: var(--ttt-x);
+}
+.square[aria-label*="O"] {
+  color: var(--ttt-o);
+}
+
+/* Control area (restart button) */
+.ttt-controls {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 2px;
+}
+.ttt-btn {
+  border-radius: 9px;
+  border: none;
+  padding: 11px 28px;
+  font-size: 1.06rem;
+  background: var(--ttt-accent);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 10px 0 rgba(255, 152, 0, 0.09);
+  cursor: pointer;
+  outline: none;
+  transition: background 0.17s, box-shadow 0.12s, transform 0.14s;
+}
+.ttt-btn:hover, .ttt-btn:focus {
+  background: #ffad42;
+  transform: translateY(-2px) scale(1.03);
+}
+.ttt-btn:active {
+  background: #ff9800;
+  transform: translateY(0) scale(1.0);
+}
+
+.ttt-footer {
+  display: flex;
+  justify-content: center;
+  gap: 1.5em;
+  font-size: 0.99rem;
+  margin-top: 18px;
+  color: #555;
+}
+
+@media (max-width: 540px) {
+  .ttt-container {
+    min-width: 92vw;
+    padding: 17vw 2vw 14vw 2vw;
+  }
+  .ttt-board {
+    min-width: unset;
+  }
+  .square {
+    width: 18vw;
+    height: 18vw;
+    font-size: 2.1rem;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Hide scroll for neatness (on mobile too) */
+body, html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ttt-accent) #eaeaea;
+}
